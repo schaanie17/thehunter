@@ -8,12 +8,10 @@ import datetime
 import pandas as pd
 
 import streamlit as st
-from streamlit_autorefresh import st_autorefresh
 
 import hunter_session
 
 st.set_page_config(layout="wide")
-st_autorefresh(interval=30000)
 st.title("The Hunter Mission Dashboard")
 
 st.text_input('Username', '', key='username')
