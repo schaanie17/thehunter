@@ -6,12 +6,15 @@ import datetime
 import os.path
 import tqdm.notebook as tqdm
 
+import pymongo
+
 
 class Session(requests.Session):
-    def __init__(self):
+    def __init__(self,mongo_url):
         super().__init__()
         self.token_data = None
         self.oauth_data = None
+        self.mongo_url  = mongo_url
         
     def connect(self,username,password):
         data = urllib.parse.urlencode({"email": username, "password": password})
@@ -23,6 +26,9 @@ class Session(requests.Session):
 
         oauth = re.search(r'oauth_consumer_key: "(\w+)"',   resp.text)[1]
         self.oauth_data = urllib.parse.urlencode({"oauth_consumer_key": oauth})
+
+        self.mongo_client = pymongo.MongoClient(self.mongo_url)
+        self.cache = self.mongo_client.thehunter_cache
 
     def load_app(self):
         resp = self.post("https://api.thehunter.com/v1/Application/application",data=self.oauth_data)
@@ -69,62 +75,64 @@ class Session(requests.Session):
             if s["state"] == 2:
                 self.missions[mid]['completedObjectives'] = s["objectives"]
 
-    def load_expeditions(self):
-        self.myExpeditions = {}
+    def __load_expedition_list(self,user_id,limit=50):
+        offset = 0
+        while True:
+            data = {
+                "user_id" : self.me["id"],
+                "offset"  : offset,
+                "limit"   : limit,
+            }
+            resp = self.post("https://api.thehunter.com/v1/Expedition/list", data=data)
+            d = json.loads(resp._content)
+
+            expOffset = offset+limit
+
+            for e in d["expeditions"]:
+                yield e
+                offset += 1
+            
+            if offset < expOffset:
+                break        
+
+    def load_expeditions(self,user_id):
         limit  = 40
         offset = 0
 
-        fileName = "expeditions.json"
-        if os.path.exists(fileName):
-            try:
-                self.myExpeditions = dict((int(id),e) for id,e in json.load(open(fileName,"r")).items())
-            except json.JSONDecodeError:
-                pass
+        eDict = dict((e["id"],e) for e in self.__load_expedition_list(user_id))
+        self.myExpeditions = {}
 
-        print(f"Loaded {len(self.myExpeditions)} expeditions")
+        print(f"Lookup {len(eDict)} expeditions")
+        for e in self.cache.expeditions.find({"_id" : {"$in" : list(eDict.keys())}}):
+            self.myExpeditions[e["id"]] = e
+            del eDict[e["id"]]
 
-        with tqdm.tqdm() as pbar:
-            finish = False
-            while not finish:
-                data = {
-                    "user_id" : self.me["id"],
-                    "offset"  : offset,
-                    "limit"   : limit,
-                }
-                resp = self.post("https://api.thehunter.com/v1/Expedition/list", data=data)
-                d = json.loads(resp._content)
+        for e in tqdm.tqdm(eDict.values(),total=len(eDict)):
+            data = {
+                "user_id"       : user_id,
+                "expedition_id" : e["id"],
+            }
+            resp = self.post("https://api.thehunter.com/v1/Public_user/expedition", data=data)
+            e2 = json.loads(resp._content)
+            e.update(e2["expedition"])
+            del e2["expedition"]
+            e.update(e2)
+            e["_id"] = e["id"]
 
-                for i,e in enumerate(d["expeditions"]):
-                    pbar.update(1)
-                    eId = e["id"]
+            self.myExpeditions[e["id"]] = e
 
-                    if eId in self.myExpeditions:
-                        #print(f"key {eId} exists")
-                        continue
-                        #finish = True
-
-                    data = {
-                        "user_id"       : self.me["id"],
-                        "expedition_id" : e["id"],
-                    }
-                    resp = self.post("https://api.thehunter.com/v1/Public_user/expedition", data=data)
-                    e["details"] = json.loads(resp._content)
-                    self.myExpeditions[e["id"]] = e
-                
-                if len(d["expeditions"]) < limit:
-                    finish = True
-                
-                offset += limit
+        if eDict:
+            print(f"Insert {len(eDict)} expeditions")
+            self.cache.expeditions.insert_many(list(eDict.values()))
 
         self.kills = []
         for e in self.myExpeditions.values():
-            self.kills.extend(e["details"]["kills"])
+            self.kills.extend(e["kills"])
 
         self.speciesKills = {}
         for k in self.kills:
             self.speciesKills.setdefault(k["species"],[]).append(k)
 
-        json.dump(self.myExpeditions,open(fileName,"w"),indent=2)   
 
     def _reserveKeyword(self,r):
         """ Extract keywords from a reserve. 
@@ -250,51 +258,3 @@ class Session(requests.Session):
                 badMissions.append(result)
                 
         return goodMissions,badMissions
-
-    def _printMissionRow(self,rowClass,m,mgTitle,mTitle,tTitles):
-        out  = f"<tr class='{rowClass}'><td>{mTitle}</td><td>{mgTitle}</td><td style='text-align:left'>"
-        out += f"<ul class='{'singleExp' if m['singleExpedition'] else 'multiExp'}'>"
-        for title,obj in zip(tTitles,m["objectives"]):
-            out += f"<li class='{'completed' if obj['id'] in m['completedObjectives'] else 'incomplete'}'>{title}</li>"
-        out += "</ul></td></tr>"
-        return out
-
-    def printMissionTable(self, goodMissions, badMissions):
-        out = """
-        <div id="scoped-content">
-            <style type="text/css" scoped>
-                tr.goodRow:nth-child(2n+0) {
-                    background-color: #ded
-                } 
-                tr.goodRow:nth-child(2n+1) {
-                    background-color: #cec
-                } 
-                tr.badRow:nth-child(2n+0) {
-                    background-color: #fee
-                } 
-                tr.badRow:nth-child(2n+1) {
-                    background-color: #fdd
-                } 
-                ul.multiExp {
-                    list-style: circle
-                }
-                ul.singleExp {
-                    list-style: disc
-                }
-                li.completed {
-                    text-decoration-line: line-through;
-                }
-                li.incomplete {
-                }
-            </style>
-            <table>
-        """
-
-        for result in goodMissions:
-            out += self._printMissionRow("goodRow",*result)
-
-        for result in badMissions:
-            out += self._printMissionRow("badRow",*result)
-
-        out += "</table></div>"
-        return out
