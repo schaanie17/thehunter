@@ -15,20 +15,27 @@ class Session(requests.Session):
         self.token_data = None
         self.oauth_data = None
         self.mongo_url  = mongo_url
+
+        self.mongo_client = pymongo.MongoClient(self.mongo_url)
+        self.cache = self.mongo_client.thehunter_cache
         
     def connect(self,username,password):
+        self.token_data = None
+        
         data = urllib.parse.urlencode({"email": username, "password": password})
         resp = self.post("https://www.thehunter.com/login?xhr=true&return_to=/",data=data)
         resp = self.get ("https://www.thehunter.com/#feed"                               )
 
-        token = re.search(r'var userAccessToken = "(\w+)";',resp.text)[1]
+        m = re.search(r'var userAccessToken = "(\w+)";',resp.text)
+        if m:
+            token = m[1]
+        else:
+            raise RuntimeError("Incorrect name or password")
+
         self.token_data = urllib.parse.urlencode({"oauth_access_token": token})
 
         oauth = re.search(r'oauth_consumer_key: "(\w+)"',   resp.text)[1]
         self.oauth_data = urllib.parse.urlencode({"oauth_consumer_key": oauth})
-
-        self.mongo_client = pymongo.MongoClient(self.mongo_url)
-        self.cache = self.mongo_client.thehunter_cache
 
     def load_app(self):
         resp = self.post("https://api.thehunter.com/v1/Application/application",data=self.oauth_data)
@@ -60,7 +67,6 @@ class Session(requests.Session):
     def load_me(self):
         resp = self.post("https://api.thehunter.com/v1/Me/me", data=self.token_data)
         self.me = json.loads(resp._content)
-
         self.myItems = dict((int(iid),cnt) for iid,cnt in self.me["items"].items())
         
     def load_missions(self):

@@ -17,30 +17,36 @@ import kills
 
 st.set_page_config(layout="wide")
 
+
+if 'session' not in st.session_state:
+    session = hunter_session.Session(mongo_url=st.secrets["MONGO_URL"])
+    st.session_state['session'] = session
+else:
+    session = st.session_state['session']
+
+
 with st.sidebar:
     st.title("The Hunter Mission Dashboard")
 
-    st.text_input('Username', '', key='username')
-    st.text_input('Password', '', key='password', type='password')
+    with st.form("login"):
 
-    if 'session' not in st.session_state:
-        session = hunter_session.Session(mongo_url=st.secrets["MONGO_URL"])
-        st.session_state['session'] = session
-    else:
-        session = st.session_state['session']
+        username    = st.text_input('Username')
+        password    = st.text_input('Password', type='password')
+        submit      = st.form_submit_button("Connect")
+        placeholder = st.empty()
 
-    def connect_cb():
-        session.connect(
-            st.session_state.username,
-            st.session_state.password,
-        )
-    
-    st.button('Connect', on_click=connect_cb)
+        if submit:
+            try:
+                session.connect(username,password)
+            except RuntimeError as err:
+                error = st.error(err)
+            
 
-if session.token_data is None:
-    st.sidebar.info("Not connected")
+connected = session.token_data is not None
+if not connected:
+    placeholder.info("Not connected")
 else:
-    st.sidebar.success(f":white_check_mark: Connected")
+    placeholder.success(f":white_check_mark: Connected")
 
     st.sidebar.selectbox(
         label       = "Select App:", 
