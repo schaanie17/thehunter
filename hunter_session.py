@@ -110,7 +110,7 @@ class Session(requests.Session):
         self.myExpeditions = {}
 
         print(f"Lookup {len(eDict)} expeditions")
-        for eids in more_itertools.ichunked(eDict.keys(),30):
+        for eids in more_itertools.ichunked(list(eDict.keys()),30):
             for e in self.cache.expeditions.find({"_id" : {"$in" : list(eids)}}):
                 self.myExpeditions[e["id"]] = e
                 del eDict[e["id"]]
