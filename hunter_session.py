@@ -5,6 +5,7 @@ import urllib
 import datetime
 import os.path
 import tqdm.notebook as tqdm
+import more_itertools
 
 import pymongo
 
@@ -109,9 +110,10 @@ class Session(requests.Session):
         self.myExpeditions = {}
 
         print(f"Lookup {len(eDict)} expeditions")
-        for e in self.cache.expeditions.find({"_id" : {"$in" : list(eDict.keys())}}):
-            self.myExpeditions[e["id"]] = e
-            del eDict[e["id"]]
+        for eids in more_itertools.ichunked(eDict.keys(),30):
+            for e in self.cache.expeditions.find({"_id" : {"$in" : list(eids)}}):
+                self.myExpeditions[e["id"]] = e
+                del eDict[e["id"]]
 
         for e in tqdm.tqdm(eDict.values(),total=len(eDict)):
             data = {

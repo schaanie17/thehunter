@@ -56,14 +56,16 @@ else:
 
     session.load_app()
     session.load_me()
-    session.load_missions()
-    session.load_expeditions(session.me["id"])
     
     if   st.session_state.app_select == "Missions":
+        session.load_missions()
         missions.render(session)        
 
-    elif st.session_state.app_select == "Scores":
-        kills.render(session)
+    else:
+        session.load_expeditions(session.me["id"])
         
-    elif st.session_state.app_select == "Expeditions":
-        expeditions.render(session)
+        if st.session_state.app_select == "Scores":
+            kills.render(session)
+        
+        elif st.session_state.app_select == "Expeditions":
+            expeditions.render(session)
