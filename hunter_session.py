@@ -89,9 +89,6 @@ class Session(requests.Session):
         }
         resp = self.post("https://api.thehunter.com/v1/Public_user/getByHostname", data=data)
         d = json.loads(resp._content)
-
-        import streamlit as st
-        st.info(d)
         return d
 
     def __load_expedition_list(self,user_id,limit=50):
@@ -115,21 +112,23 @@ class Session(requests.Session):
                 break        
 
     def load_expeditions(self,user_id):
-        import streamlit as st
-
         limit  = 40
         offset = 0
 
-        eDict = dict((e["id"],e) for e in self.__load_expedition_list(user_id))
+        eDict = {}
+        for e in tqdm(self.__load_expedition_list(user_id),desc="Looking for expeditions on thehunter.com"):
+            eDict[e["id"]] = e
+
         self.myExpeditions = {}
 
-        for eids in more_itertools.ichunked(list(eDict.keys()),30):
+        eL = list(eDict.keys())
+        for eids in tqdm(more_itertools.ichunked(eL,30),total=len(eL),desc="Looking for expeditions in the database"):
             for e in self.cache.expeditions.find({"_id" : {"$in" : list(eids)}}):
                 self.myExpeditions[e["id"]] = e
                 del eDict[e["id"]]
 
         total = len(eDict)
-        for e in tqdm(eDict.values(),total=total):
+        for e in tqdm(eDict.values(),total=total,desc="Loading missing expeditions"):
             data = {
                 "user_id"       : user_id,
                 "expedition_id" : e["id"],
