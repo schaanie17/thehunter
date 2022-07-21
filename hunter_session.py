@@ -4,7 +4,8 @@ import requests
 import urllib
 import datetime
 import os.path
-import tqdm.notebook as tqdm
+#import tqdm.notebook as tqdm
+import stqdm         as tqdm 
 import more_itertools
 
 import pymongo
@@ -117,10 +118,7 @@ class Session(requests.Session):
                 del eDict[e["id"]]
 
         total = len(eDict)
-        pbar  = st.progress(0)
-        #pbar  = tqdm.tqdm(total=total)
-
-        for i,e in enumerate(eDict.values()):
+        for e in tqdm.tqdm(eDict.values(),total=total):
             data = {
                 "user_id"       : user_id,
                 "expedition_id" : e["id"],
@@ -133,10 +131,6 @@ class Session(requests.Session):
             e["_id"] = e["id"]
 
             self.myExpeditions[e["id"]] = e
-
-            #pbar.update(1)
-            pbar.progress((i+1)/total)
-        #pbar.close()
 
         if eDict:
             self.cache.expeditions.insert_many(list(eDict.values()))
