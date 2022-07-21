@@ -21,16 +21,17 @@ def render(session):
         L = {}
         for k in session.speciesKills[species_id]:
             kid = k["id"]
-            e           = session.myExpeditions[k["expeditionId"]]
-            reserveName = session.reserves[e["reserve"]]["name"]
-            startTime   = datetime.datetime.fromtimestamp(e["start_ts"]) 
-            endTime     = datetime.datetime.fromtimestamp(e["end_ts"]) 
-            numHits     = len(k["hits"])
-            distance    = ", ".join(f"{h['distance']/1000:.1f}m" for h in k["hits"])
-            gender      = "M" if k["gender"] == 0 else "W"
-            score       = k["kill"]["score"]
+            e            = session.myExpeditions[k["expeditionId"]]
+            reserveName  = session.reserves[e["reserve"]]["name"]
+            harvestTime  = datetime.datetime.fromtimestamp(k["kill"]["confirmTs"]) 
+            harvestValue = k["kill"]["trophy_integrity"]
+            woundTime    = f"{k['kill']['wound_time']:.1}s"
+            numHits      = len(k["hits"])
+            distance     = ", ".join(f"{h['distance']/1000:.1f}m" for h in k["hits"])
+            gender       = "M" if k["gender"] == 0 else "W"
+            score        = k["kill"]["score"]
 
-            L[kid] = (reserveName,score,gender,numHits,distance,startTime,endTime)
+            L[kid] = (reserveName,score,gender,numHits,distance,harvestTime,harvestValue,woundTime)
 
-        df = pd.DataFrame.from_dict(L,orient="index",columns=["Reserve","Score","Gender","#Hits","Distance","Start","End"])
+        df = pd.DataFrame.from_dict(L,orient="index",columns=["Reserve","Score","Gender","#Hits","Distance","Harvest time","Harvest value","Wound time"])
         st.dataframe(df)
