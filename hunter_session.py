@@ -116,19 +116,19 @@ class Session(requests.Session):
         offset = 0
 
         eDict = {}
-        for e in tqdm(self.__load_expedition_list(user_id),desc="Looking for expeditions on thehunter.com"):
+        for e in tqdm(self.__load_expedition_list(user_id),desc="Looking for expeditions on thehunter.com",backend=True):
             eDict[e["id"]] = e
 
         self.myExpeditions = {}
 
         eL = list(eDict.keys())
-        for eids in tqdm(more_itertools.ichunked(eL,30),total=len(eL),desc="Looking for expeditions in the database"):
+        for eids in tqdm(more_itertools.ichunked(eL,30),total=len(eL),desc="Looking for expeditions in the database",backend=True):
             for e in self.cache.expeditions.find({"_id" : {"$in" : list(eids)}}):
                 self.myExpeditions[e["id"]] = e
                 del eDict[e["id"]]
 
         total = len(eDict)
-        for e in tqdm(eDict.values(),total=total,desc="Loading missing expeditions"):
+        for e in tqdm(eDict.values(),total=total,desc="Loading missing expeditions",backend=True):
             data = {
                 "user_id"       : user_id,
                 "expedition_id" : e["id"],
