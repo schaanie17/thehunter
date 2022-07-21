@@ -4,8 +4,8 @@ import requests
 import urllib
 import datetime
 import os.path
-#import tqdm.notebook as tqdm
-import stqdm         as tqdm 
+#from   tqdm.notebook import tqdm
+from   stqdm         import stqdm as tqdm
 import more_itertools
 
 import pymongo
@@ -118,7 +118,7 @@ class Session(requests.Session):
                 del eDict[e["id"]]
 
         total = len(eDict)
-        for e in tqdm.tqdm(eDict.values(),total=total):
+        for e in tqdm(eDict.values(),total=total):
             data = {
                 "user_id"       : user_id,
                 "expedition_id" : e["id"],
