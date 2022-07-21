@@ -62,7 +62,9 @@ else:
         missions.render(session)        
 
     else:
-        session.load_expeditions(session.me["id"])
+        hostname = st.text_input("Host name:",session.me["hostname"])
+        user = session.getByHostname(hostname)
+        session.load_expeditions(user["id"])
         
         if st.session_state.app_select == "Scores":
             kills.render(session)

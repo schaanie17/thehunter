@@ -83,11 +83,20 @@ class Session(requests.Session):
             if s["state"] == 2:
                 self.missions[mid]['completedObjectives'] = s["objectives"]
 
+    def getByHostname(self,hostname):
+        data = {
+            "hostname"   : hostname,
+        }
+        resp = self.post("https://api.thehunter.com/v1/Public_user/getByHostname", data=data)
+        d = json.loads(resp._content)
+        st.info(d)
+        return d
+
     def __load_expedition_list(self,user_id,limit=50):
         offset = 0
         while True:
             data = {
-                "user_id" : self.me["id"],
+                "user_id" : user_id,
                 "offset"  : offset,
                 "limit"   : limit,
             }
