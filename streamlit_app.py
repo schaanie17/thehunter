@@ -10,6 +10,7 @@ import pandas as pd
 import streamlit as st
 
 import hunter_session
+
 import missions
 import expeditions
 import kills
@@ -26,7 +27,7 @@ else:
 
 
 with st.sidebar:
-    st.title("The Hunter Mission Dashboard")
+    st.title("The Hunter Dashboard")
 
     with st.form("login"):
 

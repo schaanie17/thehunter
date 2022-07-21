@@ -103,19 +103,24 @@ class Session(requests.Session):
                 break        
 
     def load_expeditions(self,user_id):
+        import streamlit as st
+
         limit  = 40
         offset = 0
 
         eDict = dict((e["id"],e) for e in self.__load_expedition_list(user_id))
         self.myExpeditions = {}
 
-        print(f"Lookup {len(eDict)} expeditions")
         for eids in more_itertools.ichunked(list(eDict.keys()),30):
             for e in self.cache.expeditions.find({"_id" : {"$in" : list(eids)}}):
                 self.myExpeditions[e["id"]] = e
                 del eDict[e["id"]]
 
-        for e in tqdm.tqdm(eDict.values(),total=len(eDict)):
+        total = len(eDict)
+        pbar  = st.progress(0)
+        #pbar  = tqdm.tqdm(total=total)
+
+        for i,e in enumerate(eDict.values()):
             data = {
                 "user_id"       : user_id,
                 "expedition_id" : e["id"],
@@ -129,8 +134,11 @@ class Session(requests.Session):
 
             self.myExpeditions[e["id"]] = e
 
+            #pbar.update(1)
+            pbar.progress((i+1)/total)
+        #pbar.close()
+
         if eDict:
-            print(f"Insert {len(eDict)} expeditions")
             self.cache.expeditions.insert_many(list(eDict.values()))
 
         self.kills = []
