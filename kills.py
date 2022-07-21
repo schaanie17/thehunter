@@ -24,8 +24,8 @@ def render(session):
             e            = session.myExpeditions[k["expeditionId"]]
             reserveName  = session.reserves[e["reserve"]]["name"]
             harvestTime  = datetime.datetime.fromtimestamp(k["kill"]["confirmTs"]) 
-            harvestValue = k["kill"]["trophy_integrity"]
-            woundTime    = f"{k['kill']['wound_time']:.1}s"
+            harvestValue = f"{k['kill']['trophy_integrity']:.0f}%"
+            woundTime    = f"{k['kill']['wound_time']:.1f}s"
             numHits      = len(k["hits"])
             distance     = ", ".join(f"{h['distance']/1000:.1f}m" for h in k["hits"])
             gender       = "M" if k["gender"] == 0 else "W"
