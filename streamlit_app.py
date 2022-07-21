@@ -16,7 +16,7 @@ import expeditions
 import kills
 
 
-st.set_page_config(layout="wide")
+st.set_page_config(page_title="The Hunter Dashboard",layout="wide")
 
 
 if 'session' not in st.session_state:
@@ -41,7 +41,6 @@ with st.sidebar:
                 session.connect(username,password)
             except RuntimeError as err:
                 error = st.error(err)
-            
 
 connected = session.token_data is not None
 if not connected:
