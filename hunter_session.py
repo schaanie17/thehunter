@@ -122,12 +122,16 @@ class Session(requests.Session):
         self.myExpeditions = {}
 
         eL = list(eDict.keys())
-        for eids in tqdm(more_itertools.ichunked(eL,30),total=len(eL),desc="Looking for expeditions in the database",backend=True):
+        pbar = tqdm(total=len(eL),desc="Looking for expeditions in the database",backend=True)
+        for eids in more_itertools.ichunked(eL,30):
             for e in self.cache.expeditions.find({"_id" : {"$in" : list(eids)}}):
                 self.myExpeditions[e["id"]] = e
                 del eDict[e["id"]]
+                pbar.update(1)
+        pbar.close()
 
         total = len(eDict)
+        eNew = []
         for e in tqdm(eDict.values(),total=total,desc="Loading missing expeditions",backend=True):
             data = {
                 "user_id"       : user_id,
@@ -141,9 +145,14 @@ class Session(requests.Session):
             e["_id"] = e["id"]
 
             self.myExpeditions[e["id"]] = e
+            eNew.append(e)
 
-        if eDict:
-            self.cache.expeditions.insert_many(list(eDict.values()))
+            if len(eNew) > 50:
+                self.cache.expeditions.insert_many(eNew)
+                eNew = []
+
+        if eNew:
+            self.cache.expeditions.insert_many(eNew)
 
         self.kills = []
         for e in self.myExpeditions.values():
