@@ -89,6 +89,8 @@ class Session(requests.Session):
         }
         resp = self.post("https://api.thehunter.com/v1/Public_user/getByHostname", data=data)
         d = json.loads(resp._content)
+
+        import streamlit as st
         st.info(d)
         return d
 
