@@ -26,7 +26,7 @@ def render(session):
             startTime   = datetime.datetime.fromtimestamp(e["start_ts"]) 
             endTime     = datetime.datetime.fromtimestamp(e["end_ts"]) 
             numHits     = len(k["hits"])
-            distance    = min(h["distance"] for h in k["hits"])
+            distance    = ", ".join(f"{h["distance"]/1000:.1f}m" for h in k["hits"])
             gender      = "M" if k["gender"] == 0 else "W"
             score       = k["kill"]["score"]
 
